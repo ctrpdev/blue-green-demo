@@ -27,9 +27,9 @@ RUN poetry install --no-root
 COPY . /app/
 
 # 7. Exponer el Puerto
-EXPOSE 8000
+EXPOSE 80
 
 # 8. Comando de Ejecución (¡Corregido!)
 # Usamos 'poetry run' para asegurar que el comando se ejecute dentro del entorno virtual de Poetry.
 # NOTA: Tu CMD es casi correcto, asumiendo que el nombre de tu proyecto raíz (donde está settings.py) es 'config'.
-CMD ["poetry", "run", "gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
+CMD ["poetry", "run", "gunicorn", "--bind", "0.0.0.0:8080", "config.wsgi:application"]
