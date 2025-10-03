@@ -1,0 +1,13 @@
+# Excluye el entorno virtual local de Python
+venv/
+
+# Excluye caché de Python
+__pycache__/
+*.pyc
+*.log
+
+# Excluye la carpeta de Git
+.git/
+
+# Excluye la carpeta de la base de datos de desarrollo
+db.sqlite3
