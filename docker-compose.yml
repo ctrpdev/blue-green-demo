@@ -1,0 +1,18 @@
+services:
+  backend:
+    # 1. Define el contexto de la construcción (la ubicación del Dockerfile)
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # 2. Asigna un nombre a la imagen resultante (opcional, pero buena práctica)
+    image: gcr.io/blue-green-demo/django-backend:latest
+    # 3. Mapea el puerto del contenedor (8000) al puerto local (8000)
+    ports:
+      - "8000:8000"
+    # 4. Monta el código local dentro del contenedor (útil para desarrollo)
+    volumes:
+      - .:/app
+    environment:
+      # Pasa la lista de hosts permitidos (separados por comas)
+      # Esto incluye '0.0.0.0', que es lo que Gunicorn vincula.
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
