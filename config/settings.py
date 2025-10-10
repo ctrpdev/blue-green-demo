@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     # 'health_check.contrib.redis',               # requires Redis broker
     # 'health_check.contrib.db_heartbeat',
     # 'health_check.contrib.mail',
+
+    'myapp',  # your app
 ]
 
 MIDDLEWARE = [
