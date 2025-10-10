@@ -27,8 +27,8 @@ SECRET_KEY = 'django-insecure-9f5qgfr%#qpv&j5v0$$qiqnsj))c7^+buyh1**^-&10j_^-$ju
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+# Para desarrollo y testing: permite cualquier host
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 
@@ -143,7 +143,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', '*']
 # Nota: Usar '*' en producción es inseguro. Lo corregiremos más adelante.
 # Por ahora, para que arranque, usa:
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
 
 # Si quieres ser más específico, puedes usar:
 # ALLOWED_HOSTS = ['0.0.0.0']
