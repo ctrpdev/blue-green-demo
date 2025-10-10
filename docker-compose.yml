@@ -15,4 +15,5 @@ services:
     environment:
       # Pasa la lista de hosts permitidos (separados por comas)
       # Esto incluye '0.0.0.0', que es lo que Gunicorn vincula.
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      # - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - ALLOWED_HOSTS=35.232.253.0,localhost,127.0.0.1,0.0.0.0
