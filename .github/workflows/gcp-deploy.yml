@@ -59,12 +59,23 @@ jobs:
       #     gcloud compute ssh ${{ steps.identify_vms.outputs.green_vm_name }} \
       #       --zone=${{ env.GCP_ZONE }} \
       #       --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
+      
+      # # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
+      # - name: Desplegar código en la máquina Verde
+      #   run: |
+      #     gcloud compute ssh cristian@${{ steps.identify_vms.outputs.green_vm_name }} \
+      #       --zone=${{ env.GCP_ZONE }} \
+      #       --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
+      
       # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
       - name: Desplegar código en la máquina Verde
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_USER: ${{ github.repository_owner }}
         run: |
           gcloud compute ssh cristian@${{ steps.identify_vms.outputs.green_vm_name }} \
             --zone=${{ env.GCP_ZONE }} \
-            --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
+            --command="cd /home/cristian/blue-green-demo && git pull https://${GH_USER}:${GH_TOKEN}@github.com/${GH_USER}/blue-green-demo.git main && docker compose up -d --build"
 
       # Paso 6: Cambiar el tráfico del balanceador para que apunte a la máquina 'verde'
       - name: Redirigir tráfico a la nueva versión (Verde)
