@@ -58,7 +58,7 @@ jobs:
         run: |
           gcloud compute ssh ${{ steps.identify_vms.outputs.green_vm_name }} \
             --zone=${{ env.GCP_ZONE }} \
-            --command="cd /ruta/a/tu/proyecto && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && sudo systemctl restart gunicorn"
+            --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
 
       # Paso 6: Cambiar el tráfico del balanceador para que apunte a la máquina 'verde'
       - name: Redirigir tráfico a la nueva versión (Verde)
