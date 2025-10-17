@@ -39,43 +39,32 @@ jobs:
 
       # Paso 4: ¡La Lógica! Identificar cuál es la máquina 'verde' (staging)
       - name: Identificar máquinas de Producción (azul) y Staging (verde)
-        id: identify_vms # Le damos un ID a este paso para usar sus resultados después
+        id: identify_vms
         run: |
-          # Buscamos la VM con la etiqueta 'env=staging' y guardamos su nombre
           GREEN_VM=$(gcloud compute instances list --filter="labels.env=staging" --format="value(name)")
-          # Buscamos la VM con la etiqueta 'env=prod' y guardamos su nombre
           BLUE_VM=$(gcloud compute instances list --filter="labels.env=prod" --format="value(name)")
           
-          # 'echo' con '>> $GITHUB_OUTPUT' crea variables que los siguientes pasos pueden usar
+          # ¡VERIFICACIÓN DE ROBUSTEZ!
+          # Si alguna variable está vacía, falla el pipeline con un error claro.
+          if [[ -z "$GREEN_VM" || -z "$BLUE_VM" ]]; then
+            echo "Error: No se pudo encontrar una VM de staging (env=staging) Y una de producción (env=prod)."
+            echo "VM Staging (Verde) encontrada: '$GREEN_VM'"
+            echo "VM Producción (Azul) encontrada: '$BLUE_VM'"
+            echo "Por favor, verifica las etiquetas de las VMs en GCP. Debe existir una de cada una."
+            exit 1
+          fi
+          
           echo "green_vm_name=$GREEN_VM" >> $GITHUB_OUTPUT
           echo "blue_vm_name=$BLUE_VM" >> $GITHUB_OUTPUT
           
           echo "🔵 Máquina de Producción actual: $BLUE_VM"
           echo "🟢 Máquina de Staging para desplegar: $GREEN_VM"
 
-      # # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
-      # - name: Desplegar código en la máquina Verde
-      #   run: |
-      #     gcloud compute ssh ${{ steps.identify_vms.outputs.green_vm_name }} \
-      #       --zone=${{ env.GCP_ZONE }} \
-      #       --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
-      
-      # # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
-      # - name: Desplegar código en la máquina Verde
-      #   run: |
-      #     gcloud compute ssh cristian@${{ steps.identify_vms.outputs.green_vm_name }} \
-      #       --zone=${{ env.GCP_ZONE }} \
-      #       --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
-      
       # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
       - name: Desplegar código en la máquina Verde
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_USER: ${{ github.repository_owner }}
-        # run: |
-        #   gcloud compute ssh cristian@${{ steps.identify_vms.outputs.green_vm_name }} \
-        #     --zone=${{ env.GCP_ZONE }} \
-        #     --command="cd /home/cristian/blue-green-demo && git pull https://${GH_USER}:${GH_TOKEN}@github.com/${GH_USER}/blue-green-demo.git main && docker compose up -d --build"
         run: |
           gcloud compute ssh cristian@${{ steps.identify_vms.outputs.green_vm_name }} \
             --zone=${{ env.GCP_ZONE }} \
@@ -86,7 +75,7 @@ jobs:
         run: |
           echo "🔄 Cambiando el tráfico del balanceador a ${{ steps.identify_vms.outputs.green_vm_name }}..."
           
-          # 1. Agregamos el nuevo backend. Esto reemplazará automáticamente al antiguo.
+          # 1. Agregamos el nuevo backend. Esto reemplazará automáticamente al antiguo en la misma zona.
           gcloud compute backend-services add-backend ${{ env.BACKEND_SERVICE }} \
             --instance-group=${{ steps.identify_vms.outputs.green_vm_name }} \
             --instance-group-zone=${{ env.GCP_ZONE }} \
