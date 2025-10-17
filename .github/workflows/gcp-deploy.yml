@@ -53,10 +53,16 @@ jobs:
           echo "🔵 Máquina de Producción actual: $BLUE_VM"
           echo "🟢 Máquina de Staging para desplegar: $GREEN_VM"
 
+      # # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
+      # - name: Desplegar código en la máquina Verde
+      #   run: |
+      #     gcloud compute ssh ${{ steps.identify_vms.outputs.green_vm_name }} \
+      #       --zone=${{ env.GCP_ZONE }} \
+      #       --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
       # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
       - name: Desplegar código en la máquina Verde
         run: |
-          gcloud compute ssh ${{ steps.identify_vms.outputs.green_vm_name }} \
+          gcloud compute ssh cristian@${{ steps.identify_vms.outputs.green_vm_name }} \
             --zone=${{ env.GCP_ZONE }} \
             --command="cd /home/cristian/blue-green-demo && git pull origin main && docker compose up -d --build"
 
