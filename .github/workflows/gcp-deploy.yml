@@ -81,28 +81,24 @@ jobs:
             --zone=${{ env.GCP_ZONE }} \
             --command="cd /home/cristian/blue-green-demo && git reset --hard HEAD && git pull https://${GH_USER}:${GH_TOKEN}@github.com/${GH_USER}/blue-green-demo.git main && docker compose up -d --build"
 
-      # # Paso 6: Cambiar el tráfico del balanceador para que apunte a la máquina 'verde'
-      # - name: Redirigir tráfico a la nueva versión (Verde)
-      #   run: |
-      #     echo "🔄 Cambiando el tráfico del balanceador a ${{ steps.identify_vms.outputs.green_vm_name }}..."
-      #     gcloud compute backend-services add-backend ${{ env.BACKEND_SERVICE }} \
-      #       --instance-group=${{ steps.identify_vms.outputs.green_vm_name }} \
-      #       --instance-group-zone=${{ env.GCP_ZONE }} \
-      #       --global
-            
-      #     gcloud compute backend-services remove-backend ${{ env.BACKEND_SERVICE }} \
-      #       --instance-group=${{ steps.identify_vms.outputs.blue_vm_name }} \
-      #       --instance-group-zone=${{ env.GCP_ZONE }} \
-      #       --global
-      
       # Paso 6: Cambiar el tráfico del balanceador para que apunte a la máquina 'verde'
       - name: Redirigir tráfico a la nueva versión (Verde)
         run: |
-          echo "🔄 Apuntando el balanceador directamente a ${{ steps.identify_vms.outputs.green_vm_name }}..."
-          gcloud compute backend-services update ${{ env.BACKEND_SERVICE }} \
+          echo "🔄 Cambiando el tráfico del balanceador a ${{ steps.identify_vms.outputs.green_vm_name }}..."
+          
+          # 1. Agregamos el nuevo backend. Esto reemplazará automáticamente al antiguo.
+          gcloud compute backend-services add-backend ${{ env.BACKEND_SERVICE }} \
             --instance-group=${{ steps.identify_vms.outputs.green_vm_name }} \
             --instance-group-zone=${{ env.GCP_ZONE }} \
             --global
+            
+          # 2. Intentamos eliminar el backend antiguo. 
+          # Agregamos '|| true' para que el paso no falle si el backend ya fue eliminado (que es lo esperado).
+          gcloud compute backend-services remove-backend ${{ env.BACKEND_SERVICE }} \
+            --instance-group=${{ steps.identify_vms.outputs.blue_vm_name }} \
+            --instance-group-zone=${{ env.GCP_ZONE }} \
+            --global \
+            || true
 
       # Paso 7: Actualizar las etiquetas. ¡Esto es clave para el próximo despliegue!
       - name: Actualizar etiquetas de las VMs
