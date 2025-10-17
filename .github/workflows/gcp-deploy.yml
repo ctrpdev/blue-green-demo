@@ -1,0 +1,85 @@
+# .github/workflows/gcp-deploy.yml
+
+name: Despliegue Azul-Verde en GCP
+
+# 1. DISPARADOR: ¿Cuándo se ejecuta esto?
+# Se ejecuta cada vez que haces un 'push' a la rama 'main'.
+on:
+  push:
+    branches:
+      - main
+
+# Variables de entorno para no repetir texto
+env:
+  GCP_PROJECT: 'eng-plasma-474018-m7'
+  GCP_ZONE: 'us-central1-a'
+  BACKEND_SERVICE: 'django-backend-service'
+
+# 2. TRABAJO: ¿Qué tareas se van a realizar?
+jobs:
+  deploy-to-gcp:
+    # El tipo de máquina virtual que usará GitHub para ejecutar las tareas
+    runs-on: ubuntu-latest
+
+    # 3. PASOS: La secuencia de acciones a ejecutar
+    steps:
+      # Paso 1: Descargar tu código del repositorio a la máquina virtual de GitHub
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # Paso 2: Autenticarse con Google Cloud usando una clave secreta
+      - name: Autenticarse en Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Paso 3: Configurar la herramienta 'gcloud' para poder usarla
+      - name: Configurar gcloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      # Paso 4: ¡La Lógica! Identificar cuál es la máquina 'verde' (staging)
+      - name: Identificar máquinas de Producción (azul) y Staging (verde)
+        id: identify_vms # Le damos un ID a este paso para usar sus resultados después
+        run: |
+          # Buscamos la VM con la etiqueta 'env=staging' y guardamos su nombre
+          GREEN_VM=$(gcloud compute instances list --filter="labels.env=staging" --format="value(name)")
+          # Buscamos la VM con la etiqueta 'env=prod' y guardamos su nombre
+          BLUE_VM=$(gcloud compute instances list --filter="labels.env=prod" --format="value(name)")
+          
+          # 'echo' con '>> $GITHUB_OUTPUT' crea variables que los siguientes pasos pueden usar
+          echo "green_vm_name=$GREEN_VM" >> $GITHUB_OUTPUT
+          echo "blue_vm_name=$BLUE_VM" >> $GITHUB_OUTPUT
+          
+          echo "🔵 Máquina de Producción actual: $BLUE_VM"
+          echo "🟢 Máquina de Staging para desplegar: $GREEN_VM"
+
+      # Paso 5: Desplegar el nuevo código en la máquina 'verde' (staging)
+      - name: Desplegar código en la máquina Verde
+        run: |
+          gcloud compute ssh ${{ steps.identify_vms.outputs.green_vm_name }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="cd /ruta/a/tu/proyecto && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && sudo systemctl restart gunicorn"
+
+      # Paso 6: Cambiar el tráfico del balanceador para que apunte a la máquina 'verde'
+      - name: Redirigir tráfico a la nueva versión (Verde)
+        run: |
+          echo "🔄 Cambiando el tráfico del balanceador a ${{ steps.identify_vms.outputs.green_vm_name }}..."
+          gcloud compute backend-services add-backend ${{ env.BACKEND_SERVICE }} \
+            --instance-group=django-${{ steps.identify_vms.outputs.green_vm_name }}-group \
+            --instance-group-zone=${{ env.GCP_ZONE }} \
+            --global
+            
+          gcloud compute backend-services remove-backend ${{ env.BACKEND_SERVICE }} \
+            --instance-group=django-${{ steps.identify_vms.outputs.blue_vm_name }}-group \
+            --instance-group-zone=${{ env.GCP_ZONE }} \
+            --global
+
+      # Paso 7: Actualizar las etiquetas. ¡Esto es clave para el próximo despliegue!
+      - name: Actualizar etiquetas de las VMs
+        run: |
+          echo "🏷️ Actualizando etiquetas..."
+          # La máquina verde ahora es producción
+          gcloud compute instances add-labels ${{ steps.identify_vms.outputs.green_vm_name }} --labels=env=prod --zone=${{ env.GCP_ZONE }}
+          # La máquina azul ahora es staging
+          gcloud compute instances add-labels ${{ steps.identify_vms.outputs.blue_vm_name }} --labels=env=staging --zone=${{ env.GCP_ZONE }}
+          echo "✅ ¡Despliegue completado! ${{ steps.identify_vms.outputs.green_vm_name }} es la nueva máquina de producción."
