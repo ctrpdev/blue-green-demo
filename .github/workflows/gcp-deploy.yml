@@ -86,12 +86,12 @@ jobs:
         run: |
           echo "🔄 Cambiando el tráfico del balanceador a ${{ steps.identify_vms.outputs.green_vm_name }}..."
           gcloud compute backend-services add-backend ${{ env.BACKEND_SERVICE }} \
-            --instance-group=django-${{ steps.identify_vms.outputs.green_vm_name }}-group \
+            --instance-group=${{ steps.identify_vms.outputs.green_vm_name }} \
             --instance-group-zone=${{ env.GCP_ZONE }} \
             --global
             
           gcloud compute backend-services remove-backend ${{ env.BACKEND_SERVICE }} \
-            --instance-group=django-${{ steps.identify_vms.outputs.blue_vm_name }}-group \
+            --instance-group=${{ steps.identify_vms.outputs.blue_vm_name }} \
             --instance-group-zone=${{ env.GCP_ZONE }} \
             --global
 
